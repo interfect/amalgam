@@ -25,15 +25,21 @@ int main(int argc, char** argv) {
     
     TCODConsole::initRoot(80,40,"Amalgam",false);
 
+    // Grab an RNG
+    TCODRandom* rng = TCODRandom::getInstance();
+
     // Make a map
     Map map;
+    map.generate(rng);
+    
+    auto playerPos = map.findEmpty(rng);
     
     std::list<Entity> things;
     
     // Make a player
-    things.emplace_back(10, 10, '@');
+    things.emplace_back(playerPos.first, playerPos.second, '@');
     Entity& player = *things.begin();
-
+    
     // Make a sidebar
     auto sidebar = Window(50, 0, 30, 40, true);
     // Make a main window

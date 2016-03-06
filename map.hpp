@@ -38,6 +38,9 @@ protected:
     // Holds all the tiles in the map
     std::map<std::pair<int, int>, Tile> map;
     
+    // Clear out a rectangle and surround it with walls.
+    void make_rectangle(int x, int y, int width, int height);
+    
 public:
     /**
      * Set a tile in the map
@@ -49,7 +52,15 @@ public:
      */
     const Tile getTile(int x, int y) const;
     
+    /**
+     * Generate a map from an RNG.
+     */
+    void generate(TCODRandom* random);
     
+    /**
+     * Find a passable position
+     */
+    std::pair<int, int> findEmpty(TCODRandom* random);
     
 };
 
