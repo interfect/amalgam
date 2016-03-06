@@ -2,9 +2,13 @@
 
 namespace amalgam {
 
-Window::Window(int x, int y, int width, int height): 
-    x(x), y(y), width(width), height(height), buffer(new TCODConsole(width, height)) {
-    // Nothing to do
+Window::Window(int x, int y, int width, int height, bool border): 
+    x(x), y(y), width(width), height(height), border(border), buffer(new TCODConsole(width, height)) {
+    
+    if(border) {
+        // Draw the border
+        getConsole()->printFrame(0, 0, width, height, true);
+    }
 }
 
 void Window::draw(TCODConsole* drawTo) const {

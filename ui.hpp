@@ -16,6 +16,9 @@ protected:
     int width;
     int height;
     
+    // Do we have a border?
+    bool border;
+    
 private:
     // We need our own console. But we will change how it works so people
     // shouldn't touch it directly.
@@ -25,7 +28,7 @@ public:
     /**
      * Make a new Window at the given location with the given width and height.
      */
-    Window(int x, int y, int width, int height);
+    Window(int x, int y, int width, int height, bool border = false);
     
     /**
      * Draw the console to the root window at the right place.

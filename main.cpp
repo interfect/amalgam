@@ -13,11 +13,19 @@
 
 #include <libtcod/libtcod.hpp>
 
+#include "ui.hpp"
+
+using namespace amalgam;
 
 int main(int argc, char** argv) {
     
     
     TCODConsole::initRoot(80,40,"Amalgam",false);
+
+    // Make a sidebar
+    auto sidebar = Window(50, 0, 30, 40, true);
+    // Make a main window
+    auto map = Window(0, 0, 50, 40, true);
 
     double maxFrameTime = 0;
     
@@ -37,6 +45,9 @@ int main(int argc, char** argv) {
     
         // Now clear the screen and draw everything
         TCODConsole::root->clear();
+        
+        map.draw(TCODConsole::root);
+        sidebar.draw(TCODConsole::root);
         
         // Add a frame time counter
         // First get the frame time in ms
