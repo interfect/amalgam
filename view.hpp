@@ -28,7 +28,7 @@ public:
      * Update the internal buffer, drawing the map from the given upper left
      * coordinate.
      */
-    void update(int startX, int startY, std::list<Entity>& things);
+    void update(int startX, int startY, std::list<Entity*>& things);
     
 };
 

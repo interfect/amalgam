@@ -20,6 +20,53 @@
 
 using namespace amalgam;
 
+// Globals!
+Map map;
+Entity player(0, 0, '@');
+// All the portals on the current map
+std::list<Portal> portals;
+// There's always a point on the map where you arrive
+Entity arrivalPoint(0, 0, 'X', TCODColor::blue);
+
+// Pointers to all the entities on the current map
+std::list<Entity*> things;
+
+/**
+ * Generate a level and set up all the globals for the player arriving there.
+ */
+void generateLevel(TCODRandom* rng) {
+
+    things.clear();
+
+    // Make a map
+    map.generate(rng);
+    
+    // Make an arrival point
+    auto arrivalPos = map.findEmpty(rng);
+    arrivalPoint.setX(arrivalPos.first);
+    arrivalPoint.setY(arrivalPos.second);
+    things.push_back(&arrivalPoint);
+    
+    // Place the player on top of it
+    player.setX(arrivalPos.first);
+    player.setY(arrivalPos.second);
+    things.push_back(&player);
+    
+    // Add outgoing portals
+    portals.clear();
+    int numPortalsOut = rng->getInt(1, 3);
+    for(int i = 0; i < numPortalsOut; i++) {
+        // Make some portals
+        auto portalPos = map.findEmpty(rng);
+        portals.push_back(Portal(portalPos.first, portalPos.second));
+    }
+    for(auto& portal : portals) {
+        // Put them in the entity list
+        things.push_back(&portal);
+    }
+
+}
+
 int main(int argc, char** argv) {
     
     
@@ -28,17 +75,8 @@ int main(int argc, char** argv) {
     // Grab an RNG
     TCODRandom* rng = TCODRandom::getInstance();
 
-    // Make a map
-    Map map;
-    map.generate(rng);
-    
-    auto playerPos = map.findEmpty(rng);
-    
-    std::list<Entity> things;
-    
-    // Make a player
-    things.emplace_back(playerPos.first, playerPos.second, '@');
-    Entity& player = *things.begin();
+    // Generate a first level.
+    generateLevel(rng);
     
     // Make a sidebar
     auto sidebar = Window(50, 0, 30, 40, true);
@@ -90,6 +128,19 @@ int main(int argc, char** argv) {
             // Try moving right
             if(map.getTile(player.getX() + 1, player.getY()).isPassable()) {
                 player.setX(player.getX() + 1);
+            }
+        }
+        
+        // Is the player on a portal?
+        for(auto& portal : portals) {
+            if(portal.getX() == player.getX() && portal.getY() == player.getY()) {
+                // We're on a portal!
+                
+                // Activate it and go to a new map
+                generateLevel(rng);
+                
+                // Stop looping because everything is different
+                break;
             }
         }
     
