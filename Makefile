@@ -17,7 +17,7 @@ endif
 
 all: amalgam
 
-amalgam: main.o ui.o view.o map.o
+amalgam: main.o ui.o view.o map.o game.o
 	$(CXX) $^ -o $@ $(LDFLAGS)
 	
 clean:

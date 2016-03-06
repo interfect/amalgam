@@ -25,4 +25,12 @@ const TCODConsole* Window::getConsole() const {
     return buffer.get();
 }
 
+int Window::getWidth() const {
+    return width;
+}
+
+int Window::getHeight() const {
+    return height;
+}
+
 }

@@ -3,6 +3,9 @@
 
 #include "ui.hpp"
 #include "map.hpp"
+#include "game.hpp"
+
+#include <list>
 
 #include <libtcod/libtcod.hpp>
 
@@ -25,7 +28,7 @@ public:
      * Update the internal buffer, drawing the map from the given upper left
      * coordinate.
      */
-    void update(int startX, int startY);
+    void update(int startX, int startY, std::list<Entity>& things);
     
 };
 

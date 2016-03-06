@@ -14,6 +14,9 @@
 #include <libtcod/libtcod.hpp>
 
 #include "ui.hpp"
+#include "view.hpp"
+#include "map.hpp"
+#include "game.hpp"
 
 using namespace amalgam;
 
@@ -22,10 +25,23 @@ int main(int argc, char** argv) {
     
     TCODConsole::initRoot(80,40,"Amalgam",false);
 
+    // Make a map
+    Map map;
+    
+    std::list<Entity> things;
+    
+    // Make a player
+    things.emplace_back(10, 10, '@');
+    Entity& player = *things.begin();
+
     // Make a sidebar
     auto sidebar = Window(50, 0, 30, 40, true);
     // Make a main window
-    auto map = Window(0, 0, 50, 40, true);
+    auto mapView = MapView(map, 0, 0, 50, 40, true);
+    
+    // Decide where the map should be drawn from
+    int originX = 0;
+    int originY = 0;
 
     double maxFrameTime = 0;
     
@@ -42,11 +58,46 @@ int main(int argc, char** argv) {
             // Exit the game
             break;
         }
+        
+        if(pressed.vk == TCODK_UP) {
+            // Try moving up
+            if(map.getTile(player.getX(), player.getY() - 1).isPassable()) {
+                player.setY(player.getY() - 1);
+            }
+        }
+        
+        if(pressed.vk == TCODK_DOWN) {
+            // Try moving down
+            if(map.getTile(player.getX(), player.getY() + 1).isPassable()) {
+                player.setY(player.getY() + 1);
+            }
+        }
+        
+        if(pressed.vk == TCODK_LEFT) {
+            // Try moving left
+            if(map.getTile(player.getX() - 1, player.getY()).isPassable()) {
+                player.setX(player.getX() - 1);
+            }
+        }
+        
+        if(pressed.vk == TCODK_RIGHT) {
+            // Try moving right
+            if(map.getTile(player.getX() + 1, player.getY()).isPassable()) {
+                player.setX(player.getX() + 1);
+            }
+        }
+    
+        // Decide where the map should draw from
+        // We subtract off 2 for the border.
+        originX = player.getX() - (mapView.getWidth() - 2) / 2;
+        originY = player.getY() - (mapView.getHeight() - 2) / 2;
     
         // Now clear the screen and draw everything
         TCODConsole::root->clear();
         
-        map.draw(TCODConsole::root);
+        mapView.update(originX, originY, things);
+        
+        mapView.draw(TCODConsole::root);
         sidebar.draw(TCODConsole::root);
         
         // Add a frame time counter

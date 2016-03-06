@@ -41,6 +41,9 @@ public:
     TCODConsole* getConsole();
     const TCODConsole* getConsole() const;
     
+    int getWidth() const;
+    int getHeight() const;
+    
 };
 
 }
