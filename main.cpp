@@ -30,6 +30,10 @@ int main(int argc, char** argv) {
         TCOD_key_t pressed;
         TCODSystem::checkForEvent(TCOD_EVENT_KEY_PRESS,&pressed,NULL);
         
+        if(pressed.vk == TCODK_ESCAPE) {
+            // Exit the game
+            break;
+        }
     
         // Now clear the screen and draw everything
         TCODConsole::root->clear();
