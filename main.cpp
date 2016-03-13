@@ -17,8 +17,17 @@
 #include "view.hpp"
 #include "map.hpp"
 #include "game.hpp"
+#include "time.hpp"
 
 using namespace amalgam;
+
+// Constants!
+// What name sets are valid for naming scapes?
+std::vector<std::string> scapeNameSets = {
+    "Mingos town",
+    "dwarf surname",
+    "demon female"
+};
 
 // Globals!
 Map map;
@@ -26,13 +35,23 @@ Entity player(0, 0, '@');
 // All the portals on the current map
 std::list<Portal> portals;
 // There's always a point on the map where you arrive
-Entity arrivalPoint(0, 0, 'X', TCODColor::blue);
+Entity arrivalPoint(0, 0, 'X', TCODColor::cyan);
 
 // Pointers to all the entities on the current map
 std::list<Entity*> things;
 
 // Name of the scape where you are
 std::string scapeName;
+
+// Name of the amalgam node where you are
+std::string nodeName;
+
+// Name of the location of the node
+std::string nodeLocation;
+
+// Subjective time offset
+// Start 325 years in the future.
+std::chrono::hours timeOffset(24 * 365 * 325);
 
 /**
  * Generate a level and set up all the globals for the player arriving there.
@@ -76,17 +95,30 @@ void generateLevel(TCODRandom* rng) {
     // TODO: This might be slow. Can we just set the rng somehow?
     TCODNamegen::parse("names.txt", rng);
     
-    // Get all the name sets
-    // We inexplicably jump to the C API here...
-    auto nameSets = TCODNamegen::getSets();
-    
-    // Pick a random one
-    auto nameSetIndex = rng->getInt(0, TCOD_list_size(nameSets));
-    std::string nameSetName = std::string((char*) TCOD_list_get(nameSets, nameSetIndex));
-    TCOD_list_delete(nameSets);
+    // Pick a random valid name set for scapes
+    auto nameSetIndex = rng->getInt(0, scapeNameSets.size() - 1);
+    std::string nameSetName = scapeNameSets[nameSetIndex];
     
     // Make a name from the set, and copy the name to the string's storage.
     scapeName = TCODNamegen::generate(&nameSetName[0]);
+    
+    if(rng->getDouble(0, 1) < 0.33 || nodeName.empty()) {
+        // A portion of links lead out of the current node to another node.
+        // We also need a new node if we're just starting.
+        
+        // Make a new node name
+        std::string setName("Amalgam node name");
+        nodeName = TCODNamegen::generate(&setName[0]);
+        
+        setName = "Amalgam node location";
+        nodeLocation = TCODNamegen::generate(&setName[0]);
+        
+        // How long does it take to get there?
+        // Say we go 4-10 LY at a hop.
+        // Go in increments of a day.
+        auto travelTime = std::chrono::hours(24 * rng->getInt(365 * 4, 365 * 10));
+        timeOffset += travelTime;
+    }
     
     // Clear the name generator so we can run again.
     TCODNamegen::destroy();
@@ -102,6 +134,9 @@ int main(int argc, char** argv) {
     
     // Generate a first level.
     generateLevel(rng);
+    
+    // Set time start
+    auto gameStart = std::chrono::system_clock::now();
     
     // Make a sidebar
     auto sidebar = Window(50, 0, 30, 40, true);
@@ -181,8 +216,45 @@ int main(int argc, char** argv) {
         
         // Put some text in the sidebar.
         sidebar.clear();
+        
+        // Set up control characters
+        sidebar.getConsole()->setColorControl(TCOD_COLCTRL_1, TCODColor::red, TCODColor::black);
+        sidebar.getConsole()->setColorControl(TCOD_COLCTRL_2, TCODColor::green, TCODColor::black);
+        sidebar.getConsole()->setColorControl(TCOD_COLCTRL_3, TCODColor::lightSky, TCODColor::black);
+        sidebar.getConsole()->setColorControl(TCOD_COLCTRL_4, TCODColor::amber, TCODColor::black);
+        sidebar.getConsole()->setColorControl(TCOD_COLCTRL_5, TCODColor::purple, TCODColor::black);
+        
         // Name of the scape we are on.
-        sidebar.getConsole()->printRectEx(2, 2, sidebar.getWidth() - 2 - 1, 2, TCOD_BKGND_NONE, TCOD_LEFT, "Scape: %s", scapeName.c_str()); 
+        sidebar.getConsole()->printRectEx(2, 2, sidebar.getWidth() - 2 - 1, 2, TCOD_BKGND_NONE, TCOD_LEFT,
+            "Scape: %c%s%c", TCOD_COLCTRL_1, scapeName.c_str(), TCOD_COLCTRL_STOP); 
+        
+        // Name of the node running the scape
+        sidebar.getConsole()->printRectEx(2, 5, sidebar.getWidth() - 2 - 1, 4, TCOD_BKGND_NONE, TCOD_LEFT,
+            "Amalgam Node:\n%c%s%c", TCOD_COLCTRL_3, nodeName.c_str(), TCOD_COLCTRL_STOP);
+        
+        // Location of the node in space
+        sidebar.getConsole()->printRectEx(2, 10, sidebar.getWidth() - 2 - 1, 2, TCOD_BKGND_NONE, TCOD_LEFT,
+            "Location:\n%c%s%c", TCOD_COLCTRL_4, nodeLocation.c_str(), TCOD_COLCTRL_STOP);
+        
+        // Subjective time
+        auto realElapsed = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now() - gameStart);
+        // Convert to float seconds
+        double subjectiveSeconds = realElapsed.count() / 1000.0;
+        sidebar.getConsole()->printRectEx(2, 14, sidebar.getWidth() - 2 - 1, 2, TCOD_BKGND_NONE, TCOD_LEFT,
+            "Subjective Time:\n%c%.2f%c tau", TCOD_COLCTRL_2, subjectiveSeconds, TCOD_COLCTRL_STOP); 
+        
+        
+        // Time that it is
+        auto realDuration = std::chrono::system_clock::now() - gameStart;
+        // We say 1 subjective second is 1 real-time millisecond
+        auto inGameDuration = realDuration / 1000;
+        // Take when we started, jump to the future, and proceed slowly from there.
+        auto inGameNow = gameStart + inGameDuration + timeOffset;
+        
+        std::stringstream gameRealTime;
+        printTime(gameRealTime, inGameNow);
+        sidebar.getConsole()->printRectEx(2, 17, sidebar.getWidth() - 2 - 1, 2, TCOD_BKGND_NONE, TCOD_LEFT,
+            "Real Time:\n%c%s%c", TCOD_COLCTRL_5, gameRealTime.str().c_str(), TCOD_COLCTRL_STOP); 
         
         mapView.draw(TCODConsole::root);
         sidebar.draw(TCODConsole::root);
