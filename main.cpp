@@ -80,11 +80,14 @@ std::chrono::seconds timeOffsetFine(0);
  */
 void fadeToBlack() {
     for (int fade = 250; fade >= 0; fade -= 10) {
+        auto loop_start = std::chrono::steady_clock::now();
         TCODConsole::setFade(fade, TCODColor::black);
         TCODConsole::flush();
         // Make sure OS event loop stuff runs in here.
         TCOD_key_t pressed;
         TCODSystem::checkForEvent(TCOD_EVENT_KEY_PRESS, &pressed, NULL);
+        auto elapsed = std::chrono::steady_clock::now() - loop_start;
+        std::this_thread::sleep_for(std::chrono::milliseconds(10) - elapsed);
     }
 }
 
@@ -93,11 +96,14 @@ void fadeToBlack() {
  */
 void fadeFromBlack() {
     for (int fade = 4; fade <= 254; fade += 10) {
+        auto loop_start = std::chrono::steady_clock::now();
         TCODConsole::setFade(fade, TCODColor::black);
         TCODConsole::flush();
         // Make sure OS event loop stuff runs in here.
         TCOD_key_t pressed;
         TCODSystem::checkForEvent(TCOD_EVENT_KEY_PRESS, &pressed, NULL);
+        auto elapsed = std::chrono::steady_clock::now() - loop_start;
+        std::this_thread::sleep_for(std::chrono::milliseconds(10) - elapsed);
     }
 }
 
@@ -106,9 +112,12 @@ void fadeFromBlack() {
  */
 void wait(int ms) {
     for(int i = 0; i < ms; i += 10) {
+        auto loop_start = std::chrono::steady_clock::now();
         TCODConsole::flush();
         TCOD_key_t pressed;
         TCODSystem::checkForEvent(TCOD_EVENT_KEY_PRESS, &pressed, NULL);
+        auto elapsed = std::chrono::steady_clock::now() - loop_start;
+        std::this_thread::sleep_for(std::chrono::milliseconds(10) - elapsed);
     }
 }
 
@@ -161,6 +170,7 @@ void generateLevel(TCODRandom* rng) {
         // Fade to black, blocking
         if(TCODConsole::getFade() > 0) {
             fadeToBlack();
+            wait(500);
         }
         
         // Make a new node name
@@ -369,7 +379,7 @@ int main(int argc, char** argv) {
         // How long did the game loop take?
         auto elapsed = std::chrono::steady_clock::now() - loop_start;
         
-        // Sleep for a total frame time of 20 ms
+        // Sleep for a total frame time of 10 ms
         std::this_thread::sleep_for(std::chrono::milliseconds(10) - elapsed);
         
         if(nodeName == finalDestination) {
