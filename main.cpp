@@ -371,8 +371,8 @@ int main(int argc, char** argv) {
             std::chrono::steady_clock::now() - loop_start).count();
         maxFrameTime = std::max(frameTime, maxFrameTime);
         // Draw it
-        TCODConsole::root->printEx(79, 0, TCOD_BKGND_NONE, TCOD_RIGHT, "Frame: %.2f ms/%.2f ms max",
-            frameTime, maxFrameTime);
+        //TCODConsole::root->printEx(79, 0, TCOD_BKGND_NONE, TCOD_RIGHT, "Frame: %.2f ms/%.2f ms max",
+        //    frameTime, maxFrameTime);
         
         TCODConsole::flush();
         
