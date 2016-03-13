@@ -50,8 +50,10 @@ std::string nodeName;
 std::string nodeLocation;
 
 // Subjective time offset
-// Start 325 years in the future.
+// Start in the future.
+// This can wrap around, so we split it up.
 std::chrono::hours timeOffset(24 * 365 * 325);
+std::chrono::seconds timeOffsetFine(0);
 
 /**
  * Generate a level and set up all the globals for the player arriving there.
@@ -106,6 +108,17 @@ void generateLevel(TCODRandom* rng) {
         // A portion of links lead out of the current node to another node.
         // We also need a new node if we're just starting.
         
+        // Fade to black, blocking
+        if(TCODConsole::getFade() > 0) {
+            for (int fade = 250; fade > 0; fade -= 10) {
+                TCODConsole::setFade(fade, TCODColor::black);
+                TCODConsole::flush();
+                // Make sure OS event loop stuff runs in here.
+                TCOD_key_t pressed;
+                TCODSystem::checkForEvent(TCOD_EVENT_KEY_PRESS, &pressed, NULL);
+            }
+        }
+        
         // Make a new node name
         std::string setName("Amalgam node name");
         nodeName = TCODNamegen::generate(&setName[0]);
@@ -115,9 +128,9 @@ void generateLevel(TCODRandom* rng) {
         
         // How long does it take to get there?
         // Say we go 4-10 LY at a hop.
-        // Go in increments of a day.
-        auto travelTime = std::chrono::hours(24 * rng->getInt(365 * 4, 365 * 10));
+        auto travelTime = std::chrono::hours(rng->getInt(24 * 365 * 4, 24 * 365 * 10));
         timeOffset += travelTime;
+        timeOffsetFine += std::chrono::seconds(rng->getInt(0, 60 * 60));
     }
     
     // Clear the name generator so we can run again.
@@ -127,10 +140,13 @@ void generateLevel(TCODRandom* rng) {
 int main(int argc, char** argv) {
     
     
-    TCODConsole::initRoot(80,40,"Amalgam",false);
+    TCODConsole::initRoot(80, 40, "Amalgam", false);
 
     // Grab an RNG
     TCODRandom* rng = TCODRandom::getInstance();
+    
+    // Start faded to black
+    TCODConsole::setFade(0, TCODColor::black);
     
     // Generate a first level.
     generateLevel(rng);
@@ -156,7 +172,7 @@ int main(int argc, char** argv) {
         
         // Collect key presses
         TCOD_key_t pressed;
-        TCODSystem::checkForEvent(TCOD_EVENT_KEY_PRESS,&pressed,NULL);
+        TCODSystem::checkForEvent(TCOD_EVENT_KEY_PRESS, &pressed, NULL);
         
         if(pressed.vk == TCODK_ESCAPE) {
             // Exit the game
@@ -212,6 +228,13 @@ int main(int argc, char** argv) {
         // Now clear the screen and draw everything
         TCODConsole::root->clear();
         
+        // Fade up from black if we're faded.
+        int fade = TCODConsole::getFade();
+        if(fade < 254) {
+            // Fade up from black
+            TCODConsole::setFade(std::min(fade + 10, 254),TCODColor::black);
+        }
+        
         mapView.update(originX, originY, things);
         
         // Put some text in the sidebar.
@@ -249,7 +272,7 @@ int main(int argc, char** argv) {
         // We say 1 subjective second is 1 real-time millisecond
         auto inGameDuration = realDuration / 1000;
         // Take when we started, jump to the future, and proceed slowly from there.
-        auto inGameNow = gameStart + inGameDuration + timeOffset;
+        auto inGameNow = gameStart + inGameDuration + timeOffset + timeOffsetFine;
         
         std::stringstream gameRealTime;
         printTime(gameRealTime, inGameNow);
