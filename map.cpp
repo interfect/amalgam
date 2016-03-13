@@ -1,5 +1,9 @@
 #include "map.hpp"
 
+#include <set>
+#include <list>
+#include <vector>
+
 namespace amalgam {
 
 Tile::Tile(int character, bool passable) : character(character), passable(passable) {
@@ -35,11 +39,57 @@ void Map::generate(TCODRandom* random) {
     // Throw out the old map
     map.clear();
     
-    int numRooms = random->getInt(10, 20);
+    int numRooms = random->getInt(20, 30);
     
     for(int i = 0; i < numRooms; i++) {
         // Make some rooms
         make_rectangle(random->getInt(0, 20), random->getInt(0, 20), random->getInt(3, 10), random->getInt(3, 10));
+    }
+    
+    // Flood fill from a single point and delete everything else.
+    std::set<std::pair<int, int>> reachable;
+    
+    // We need to remember what we already queued
+    std::set<std::pair<int, int>> tested;
+    // Start at a random place and flood fill from there.
+    std::list<std::pair<int, int>> queue = {findEmpty(random)};
+    
+    while(queue.size() > 0) {
+        // Grab a random place
+        auto toVisit = queue.front();
+        queue.pop_front();
+        
+        if(getTile(toVisit.first, toVisit.second).isPassable()) {
+            // We can go here!
+            
+            // This tile is reachable
+            reachable.insert(toVisit);
+            
+            std::vector<std::pair<int, int>> offsets = {{1, 0}, {0, 1}, {-1, 0}, {0, -1}};
+            for(auto offset : offsets) {
+                auto nextToVisit = std::make_pair(toVisit.first + offset.first, toVisit.second + offset.second);
+                
+                if(!tested.count(nextToVisit)) {
+                
+                    // Try this potentially reachable spot next.
+                    queue.push_back(nextToVisit);
+                    // Don't queue it again
+                    tested.insert(nextToVisit);   
+                }
+                
+            }
+        }
+    }
+    
+    for(auto& kv : map) {
+        if(!reachable.count(kv.first) && kv.second.isPassable()) {
+            // This is a passable place that isn't reachable.
+            
+            // Make it impassable as a hack. The player will never know because
+            // they can never get there, but it won't be chosen when we ask for
+            // a passable spot.
+            kv.second = Tile(kv.second.getCharacter(), false);
+        }
     }
     
 }
