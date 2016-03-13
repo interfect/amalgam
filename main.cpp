@@ -23,10 +23,27 @@ using namespace amalgam;
 
 // Constants!
 // What name sets are valid for naming scapes?
-std::vector<std::string> scapeNameSets = {
-    "Mingos town",
+std::vector<std::string> SCAPE_NAME_SETS = {
+    "Celtic male",
+    "Celtic female",
+    "Fantasy male",
+    "Fantasy female",
+    "Mesopotamian male",
+    "Mesopotamian female",
+    "Norse male",
+    "Norse female",
+    "region",
+    "town",
+    "demon male",
+    "demon female",
+    "dwarf male",
+    "dwarf female",
     "dwarf surname",
-    "demon female"
+    "Mingos Norse male",
+    "Mingos Norse female",
+    "male",
+    "female",
+    "Mingos town"
 };
 
 // Globals!
@@ -49,11 +66,51 @@ std::string nodeName;
 // Name of the location of the node
 std::string nodeLocation;
 
+// What name generator do we use for scapes?
+int nodeTheme;
+
 // Subjective time offset
 // Start in the future.
 // This can wrap around, so we split it up.
 std::chrono::hours timeOffset(24 * 365 * 325);
 std::chrono::seconds timeOffsetFine(0);
+
+/**
+ * Fade out to black.
+ */
+void fadeToBlack() {
+    for (int fade = 250; fade >= 0; fade -= 10) {
+        TCODConsole::setFade(fade, TCODColor::black);
+        TCODConsole::flush();
+        // Make sure OS event loop stuff runs in here.
+        TCOD_key_t pressed;
+        TCODSystem::checkForEvent(TCOD_EVENT_KEY_PRESS, &pressed, NULL);
+    }
+}
+
+/**
+ * Fade in from black, non-interactively.
+ */
+void fadeFromBlack() {
+    for (int fade = 4; fade <= 254; fade += 10) {
+        TCODConsole::setFade(fade, TCODColor::black);
+        TCODConsole::flush();
+        // Make sure OS event loop stuff runs in here.
+        TCOD_key_t pressed;
+        TCODSystem::checkForEvent(TCOD_EVENT_KEY_PRESS, &pressed, NULL);
+    }
+}
+
+/**
+ * Wait this approximate amount of time while polling libtcod events
+ */
+void wait(int ms) {
+    for(int i = 0; i < ms; i += 10) {
+        TCODConsole::flush();
+        TCOD_key_t pressed;
+        TCODSystem::checkForEvent(TCOD_EVENT_KEY_PRESS, &pressed, NULL);
+    }
+}
 
 /**
  * Generate a level and set up all the globals for the player arriving there.
@@ -97,26 +154,13 @@ void generateLevel(TCODRandom* rng) {
     // TODO: This might be slow. Can we just set the rng somehow?
     TCODNamegen::parse("names.txt", rng);
     
-    // Pick a random valid name set for scapes
-    auto nameSetIndex = rng->getInt(0, scapeNameSets.size() - 1);
-    std::string nameSetName = scapeNameSets[nameSetIndex];
-    
-    // Make a name from the set, and copy the name to the string's storage.
-    scapeName = TCODNamegen::generate(&nameSetName[0]);
-    
     if(rng->getDouble(0, 1) < 0.33 || nodeName.empty()) {
         // A portion of links lead out of the current node to another node.
         // We also need a new node if we're just starting.
         
         // Fade to black, blocking
         if(TCODConsole::getFade() > 0) {
-            for (int fade = 250; fade > 0; fade -= 10) {
-                TCODConsole::setFade(fade, TCODColor::black);
-                TCODConsole::flush();
-                // Make sure OS event loop stuff runs in here.
-                TCOD_key_t pressed;
-                TCODSystem::checkForEvent(TCOD_EVENT_KEY_PRESS, &pressed, NULL);
-            }
+            fadeToBlack();
         }
         
         // Make a new node name
@@ -131,7 +175,14 @@ void generateLevel(TCODRandom* rng) {
         auto travelTime = std::chrono::hours(rng->getInt(24 * 365 * 4, 24 * 365 * 10));
         timeOffset += travelTime;
         timeOffsetFine += std::chrono::seconds(rng->getInt(0, 60 * 60));
+        
+        // Pick a random valid name set for scapes here
+        nodeTheme = rng->getInt(0, SCAPE_NAME_SETS.size() - 1);
     }
+    
+    // Make a scape name from the node's theme, and copy the name to the string's storage.
+    std::string nameSetName = SCAPE_NAME_SETS[nodeTheme];
+    scapeName = TCODNamegen::generate(&nameSetName[0]);
     
     // Clear the name generator so we can run again.
     TCODNamegen::destroy();
@@ -147,6 +198,31 @@ int main(int argc, char** argv) {
     
     // Start faded to black
     TCODConsole::setFade(0, TCODColor::black);
+    
+    // Where is the player going?
+    TCODNamegen::parse("names.txt", rng);
+    std::string setName("Amalgam node name");
+    std::string finalDestination = TCODNamegen::generate(&setName[0]);
+    TCODNamegen::destroy();
+    
+    
+    // Set up control characters globally
+    TCODConsole::setColorControl(TCOD_COLCTRL_1, TCODColor::red, TCODColor::black);
+    TCODConsole::setColorControl(TCOD_COLCTRL_2, TCODColor::green, TCODColor::black);
+    TCODConsole::setColorControl(TCOD_COLCTRL_3, TCODColor::lightSky, TCODColor::black);
+    TCODConsole::setColorControl(TCOD_COLCTRL_4, TCODColor::amber, TCODColor::black);
+    TCODConsole::setColorControl(TCOD_COLCTRL_5, TCODColor::purple, TCODColor::black);
+    
+    // Tell the player where to go
+    TCODConsole::root->clear();
+    TCODConsole::root->printRectEx(20, 20, 40, 2, TCOD_BKGND_NONE, TCOD_LEFT,
+        "Reach %c%s%c", TCOD_COLCTRL_3, finalDestination.c_str(), TCOD_COLCTRL_STOP);
+    
+    // Do the opening cutscene
+    fadeFromBlack();
+    wait(1500);
+    fadeToBlack();
+    
     
     // Generate a first level.
     generateLevel(rng);
@@ -240,30 +316,23 @@ int main(int argc, char** argv) {
         // Put some text in the sidebar.
         sidebar.clear();
         
-        // Set up control characters
-        sidebar.getConsole()->setColorControl(TCOD_COLCTRL_1, TCODColor::red, TCODColor::black);
-        sidebar.getConsole()->setColorControl(TCOD_COLCTRL_2, TCODColor::green, TCODColor::black);
-        sidebar.getConsole()->setColorControl(TCOD_COLCTRL_3, TCODColor::lightSky, TCODColor::black);
-        sidebar.getConsole()->setColorControl(TCOD_COLCTRL_4, TCODColor::amber, TCODColor::black);
-        sidebar.getConsole()->setColorControl(TCOD_COLCTRL_5, TCODColor::purple, TCODColor::black);
-        
         // Name of the scape we are on.
-        sidebar.getConsole()->printRectEx(2, 2, sidebar.getWidth() - 2 - 1, 2, TCOD_BKGND_NONE, TCOD_LEFT,
+        sidebar.getConsole()->printRectEx(2, 2, sidebar.getWidth() - 2 - 2, 2, TCOD_BKGND_NONE, TCOD_LEFT,
             "Scape: %c%s%c", TCOD_COLCTRL_1, scapeName.c_str(), TCOD_COLCTRL_STOP); 
         
         // Name of the node running the scape
-        sidebar.getConsole()->printRectEx(2, 5, sidebar.getWidth() - 2 - 1, 4, TCOD_BKGND_NONE, TCOD_LEFT,
+        sidebar.getConsole()->printRectEx(2, 5, sidebar.getWidth() - 2 - 2, 4, TCOD_BKGND_NONE, TCOD_LEFT,
             "Amalgam Node:\n%c%s%c", TCOD_COLCTRL_3, nodeName.c_str(), TCOD_COLCTRL_STOP);
         
         // Location of the node in space
-        sidebar.getConsole()->printRectEx(2, 10, sidebar.getWidth() - 2 - 1, 2, TCOD_BKGND_NONE, TCOD_LEFT,
+        sidebar.getConsole()->printRectEx(2, 10, sidebar.getWidth() - 2 - 2, 2, TCOD_BKGND_NONE, TCOD_LEFT,
             "Location:\n%c%s%c", TCOD_COLCTRL_4, nodeLocation.c_str(), TCOD_COLCTRL_STOP);
         
         // Subjective time
         auto realElapsed = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now() - gameStart);
         // Convert to float seconds
         double subjectiveSeconds = realElapsed.count() / 1000.0;
-        sidebar.getConsole()->printRectEx(2, 14, sidebar.getWidth() - 2 - 1, 2, TCOD_BKGND_NONE, TCOD_LEFT,
+        sidebar.getConsole()->printRectEx(2, 14, sidebar.getWidth() - 2 - 2, 2, TCOD_BKGND_NONE, TCOD_LEFT,
             "Subjective Time:\n%c%.2f%c tau", TCOD_COLCTRL_2, subjectiveSeconds, TCOD_COLCTRL_STOP); 
         
         
@@ -276,8 +345,12 @@ int main(int argc, char** argv) {
         
         std::stringstream gameRealTime;
         printTime(gameRealTime, inGameNow);
-        sidebar.getConsole()->printRectEx(2, 17, sidebar.getWidth() - 2 - 1, 2, TCOD_BKGND_NONE, TCOD_LEFT,
+        sidebar.getConsole()->printRectEx(2, 17, sidebar.getWidth() - 2 - 2, 2, TCOD_BKGND_NONE, TCOD_LEFT,
             "Real Time:\n%c%s%c", TCOD_COLCTRL_5, gameRealTime.str().c_str(), TCOD_COLCTRL_STOP); 
+        
+        // Name of the node we want to go to
+        sidebar.getConsole()->printRectEx(2, 25, sidebar.getWidth() - 2 - 2, 4, TCOD_BKGND_NONE, TCOD_LEFT,
+            "Destination Node:\n%c%s%c", TCOD_COLCTRL_3, finalDestination.c_str(), TCOD_COLCTRL_STOP);
         
         mapView.draw(TCODConsole::root);
         sidebar.draw(TCODConsole::root);
@@ -298,6 +371,31 @@ int main(int argc, char** argv) {
         
         // Sleep for a total frame time of 20 ms
         std::this_thread::sleep_for(std::chrono::milliseconds(10) - elapsed);
+        
+        if(nodeName == finalDestination) {
+            // You win!
+            fadeToBlack();
+            
+            // Tell the player where they got
+            TCODConsole::root->clear();
+            TCODConsole::root->printRectEx(20, 20, 40, 2, TCOD_BKGND_NONE, TCOD_LEFT,
+                "You have successfully reached %c%s%c", TCOD_COLCTRL_3, finalDestination.c_str(), TCOD_COLCTRL_STOP);
+                
+            TCODConsole::root->printRectEx(25, 25, 20, 2, TCOD_BKGND_NONE, TCOD_LEFT,
+                "Subjective time: %c%.2f%c tau", TCOD_COLCTRL_2, TCOD_COLCTRL_STOP);
+                
+            TCODConsole::root->printRectEx(30, 30, 20, 2, TCOD_BKGND_NONE, TCOD_LEFT,
+                "%cYou win.%c", TCOD_COLCTRL_1, TCOD_COLCTRL_STOP);
+            
+            // Do the closing cutscene
+            fadeFromBlack();
+            wait(1500);
+            fadeToBlack();
+            
+            break;
+            
+        }
+        
     }
 
     return 0;

@@ -10,7 +10,7 @@ name "Amalgam node name" {
     // These are really syllable starts and ends
     phonemesVocals = "Kon, Ra, Re, Kan, Ron, Mun, Ma, Gi, Wa, War, Nol, Lon, Run, Ho, Mes, Sem, Jog, Gon, Gao, Rem, Kok, Za, Shi, Gen, For, Fak, Quo"
     phonemesConsonants = "shi, ha, no, re, an, lo, li, ra, re, ron, ta, te, to, ut, ho, me, lo, ti, hi, he, en, et, te, ol"
-    rules = "$s_$e, $m_$e, $s_$e_of_$m, $e_of_$m/,_$s The_$P_$s_$e, The_$e_of_$m/,_$s, $25P_$25s_$m_$e_$p$p$p$p, $v$c_$e, $e_of_$v$c$25c, $P_$s_$v$c, $P_$P_$s_$m_$e"
+    rules = "$s_$e, $m_$e, $s_$e_of_$m, $e_of_$m/,_$s The_$P_$s_$e, The_$s_$e, The_$e_of_$m/,_$s, $25P_$25s_$m_$e_$p$p$p$p, $v$c_$e, $e_of_$v$c$25c, $P_$s_$v$c, $P_$P_$s_$m_$e"
 } 
 
 // Locations for Amalgam nodes
