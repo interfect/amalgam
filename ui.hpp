@@ -36,6 +36,11 @@ public:
     void draw(TCODConsole* drawTo) const;
     
     /**
+     * Clear the underlying console and redraw the border if applicable.
+     */
+    void clear();
+    
+    /**
      * Get a pointer to the underlying libtcod console to draw on
      */
     TCODConsole* getConsole();

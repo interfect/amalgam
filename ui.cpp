@@ -16,6 +16,14 @@ void Window::draw(TCODConsole* drawTo) const {
     // drawing on.
     TCODConsole::blit(getConsole(), 0, 0, width, height, drawTo, x, y);
 }
+
+void Window::clear() {
+    getConsole()->clear();
+    if(border) {
+        // Draw the border
+        getConsole()->printFrame(0, 0, width, height, true);
+    }
+}
     
 TCODConsole* Window::getConsole() {
     return buffer.get();

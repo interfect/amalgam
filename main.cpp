@@ -31,8 +31,13 @@ Entity arrivalPoint(0, 0, 'X', TCODColor::blue);
 // Pointers to all the entities on the current map
 std::list<Entity*> things;
 
+// Name of the scape where you are
+std::string scapeName;
+
 /**
  * Generate a level and set up all the globals for the player arriving there.
+ *
+ * The name generator must be not yet set up, or reset (so we can set its RNG).
  */
 void generateLevel(TCODRandom* rng) {
 
@@ -64,7 +69,27 @@ void generateLevel(TCODRandom* rng) {
         // Put them in the entity list
         things.push_back(&portal);
     }
-
+    
+    // Name the scape
+    
+    // Set up the name generator
+    // TODO: This might be slow. Can we just set the rng somehow?
+    TCODNamegen::parse("names.txt", rng);
+    
+    // Get all the name sets
+    // We inexplicably jump to the C API here...
+    auto nameSets = TCODNamegen::getSets();
+    
+    // Pick a random one
+    auto nameSetIndex = rng->getInt(0, TCOD_list_size(nameSets));
+    std::string nameSetName = std::string((char*) TCOD_list_get(nameSets, nameSetIndex));
+    TCOD_list_delete(nameSets);
+    
+    // Make a name from the set, and copy the name to the string's storage.
+    scapeName = TCODNamegen::generate(&nameSetName[0]);
+    
+    // Clear the name generator so we can run again.
+    TCODNamegen::destroy();
 }
 
 int main(int argc, char** argv) {
@@ -74,7 +99,7 @@ int main(int argc, char** argv) {
 
     // Grab an RNG
     TCODRandom* rng = TCODRandom::getInstance();
-
+    
     // Generate a first level.
     generateLevel(rng);
     
@@ -153,6 +178,11 @@ int main(int argc, char** argv) {
         TCODConsole::root->clear();
         
         mapView.update(originX, originY, things);
+        
+        // Put some text in the sidebar.
+        sidebar.clear();
+        // Name of the scape we are on.
+        sidebar.getConsole()->printRectEx(2, 2, sidebar.getWidth() - 2 - 1, 2, TCOD_BKGND_NONE, TCOD_LEFT, "Scape: %s", scapeName.c_str()); 
         
         mapView.draw(TCODConsole::root);
         sidebar.draw(TCODConsole::root);
